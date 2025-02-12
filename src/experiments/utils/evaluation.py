@@ -6,19 +6,46 @@ from src.experiments.utils import elementwise_mean
 
 
 def relative_squared_error(y_true, y_pred):
+    """
+    Compute the relative squared error (RSE) between the true and predicted values.
+    """
     return np.sum(np.square(y_true - y_pred)) / np.sum(np.square(np.mean(y_true) - y_pred))
 
 def symmetric_mean_absolute_percentage_error(y_true, y_pred):
+    """
+    Compute the symmetric mean absolute percentage error (SMAPE) between the true and predicted values.
+    """
     return np.mean(2 * np.abs(y_true - y_pred) / (np.abs(y_true) + np.abs(y_pred)))
 
 
 def compute_metrics(data, predictions, target_transformer_name):
+    """
+    Compute the metrics (RSE, MAPE, SMAPE, error) for the predictions.
+    """
     if isinstance(predictions, pd.DataFrame) and predictions.index.nlevels > 1:
         return compute_metrics_multiple_instances(data, predictions, target_transformer_name)
     else:
         return compute_metrics_single_instance(data, predictions, target_transformer_name)
 
 def compute_metrics_multiple_instances(data, predictions, target_transformer_name):
+    """
+    Compute the metrics (RSE, MAPE, SMAPE, error) for the predictions when there are multiple instances. The predictions
+    are grouped by the first level of the index. The metrics are computed for each group and then averaged.
+
+    Parameters
+    ----------
+    data : Dataset
+        The dataset used to compute the metrics.
+    predictions : pd.DataFrame
+        The predictions to compute the metrics for. The index of the DataFrame has to have at least two levels.
+    target_transformer_name : str
+        The name of the target transformer used to transform the target variable.
+
+    Returns
+    -------
+    Tuple[float, float, float, np.ndarray, float, float, float, np.ndarray]
+        The average transformed RSE, MAPE, SMAPE, and error, and the average back-transformed RSE, MAPE, SMAPE, and error.
+    """
     transformed_rse = []
     transformed_mape = []
     transformed_smape = []
@@ -60,6 +87,24 @@ def compute_metrics_multiple_instances(data, predictions, target_transformer_nam
             average_back_transformed_error)
 
 def compute_metrics_single_instance(data, predictions, target_transformer_name):
+    """
+    Compute the metrics (RSE, MAPE, SMAPE, error) for the predictions when there is only one instance. The metrics are
+    computed for the predictions and the back-transformed predictions.
+
+    Parameters
+    ----------
+    data : Dataset
+        The dataset used to compute the metrics.
+    predictions : np.ndarray or pd.Series
+        The predictions to compute the metrics for.
+    target_transformer_name : str
+        The name of the target transformer used to transform the target variable.
+
+    Returns
+    -------
+    Tuple[float, float, float, np.ndarray, float, float, float, np.ndarray]
+        The transformed RSE, MAPE, SMAPE, and error, and the back-transformed RSE, MAPE, SMAPE, and error.
+    """
     # Compute RSE, MAPE, and SMAPE
     predictions_values = predictions.values if not isinstance(predictions, np.ndarray) else predictions
     ytest = data.ytest.values if not isinstance(predictions, np.ndarray) else data.ytest
@@ -107,53 +152,3 @@ def compute_metrics_single_instance(data, predictions, target_transformer_name):
 
     return (transformed_rse, transformed_mape, transformed_smape, transformed_error,
             back_transformed_rse, back_transformed_mape, back_transformed_smape, back_transformed_error)
-
-
-
-
-    # # Target transformation with/without contextual transformation
-    # if target_transformer_name is not None:
-    #     error = None
-    #     try:
-    #         backtransformed_pred = data.other_params['target_transformer'].inverse_transform(
-    #             predictions.reshape(-1, 1)).ravel()
-    #         backtransformed_y = data.other_params['target_transformer'].inverse_transform(data.ytest.to_frame()).squeeze()
-    #         if 'contextual_transform_feature' in data.other_params.keys():
-    #             backtransformed_pred = data.inverse_contextual_transform(backtransformed_pred)
-    #             backtransformed_y = data.inverse_contextual_transform(backtransformed_pred)
-    #         else:
-    #             backtransformed_y = data.ytest
-    #         error = transformed_y - transformed_pred
-    #         score = root_mean_squared_error(transformed_y, transformed_pred)
-    #         transformed_rse = relative_squared_error(transformed_y, transformed_pred)
-    #     except ValueError:
-    #         score = np.nan
-    #         transformed_rse = np.nan
-    #         if error is None:  # The transformation failed
-    #             error = np.nan
-    #
-    # # No target transformation, but there is a contextual transformation
-    # elif 'contextual_transform_feature' in data.other_params.keys():
-    #     transformed_pred = data.inverse_contextual_transform(predictions)
-    #     transformed_ytest = data.inverse_contextual_transform(data.ytest)
-    #     score = root_mean_squared_error(transformed_ytest, transformed_pred)
-    #     transformed_rse = relative_squared_error(transformed_ytest, transformed_pred)
-    #     error = transformed_ytest - transformed_pred
-    #
-    # # No target transformation, no contextual transformation
-    # else:
-    #     score = root_mean_squared_error(data.ytest, predictions)
-    #     transformed_rse = relative_squared_error(data.ytest, predictions)
-    #     error = data.ytest - predictions
-    # if target_transformer_name is not None:
-    #     with warnings.catch_warnings():
-    #         warnings.simplefilter("ignore")
-    #         if target_transformer_name == Keys.transformer_normalized:
-    #             ytest = data.other_params['target_transformer'].inverse_transform(data.ytest.to_frame()).squeeze()
-    #         else:
-    #             ytest = data.other_params['target_transformer'].transform(data.ytest.to_frame()).ravel()
-    # else:
-    #     ytest = data.ytest
-    # nrmse = root_mean_squared_error(ytest, predictions) / (ytest.max() - ytest.min())
-    # rse = relative_squared_error(ytest, predictions)
-    # return error, nrmse, rse, score, transformed_rse

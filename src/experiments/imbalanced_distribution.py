@@ -16,6 +16,7 @@ from src.experiments.utils.evaluation import compute_metrics
 
 base = os.path.dirname(os.path.realpath(__file__))
 
+# The default classifiers used in the experiments
 DEFAULT_CLFS = [
     LassoTuned(SEED),
     RidgeRegressionTuned(SEED),
@@ -23,6 +24,7 @@ DEFAULT_CLFS = [
     SupportVectorRegressorWrapper(SEED)
 ]
 
+# The name of this experiment to save it in the correct folder
 NAME = "imbalanced_distribution"
 
 # feature_transform_condition_default = skewed_columns
@@ -31,6 +33,42 @@ feature_transform_condition_default = None
 
 def run(data: Dataset, clf=DEFAULT_CLFS[1], target_transformer_name=None, feature_transformer_name=None,
         feature_transform_condition=feature_transform_condition_default, suffix=""):
+    """
+    This functions (1) transforms the features if feature_transformer_name is not None and only the features that
+    satisfy the feature_transform_condition, (2) transforms the target if target_transformer_name is not None, (3)
+    fits the classifier on the transformed target and (4) computes the metrics for the predictions in the transformed
+    space and the predictions in the original target space. The results are saved in the results file and nothing is
+    returned.
+
+    Parameters
+    ----------
+    data: Dataset
+        The dataset to run the experiment on
+    clf: Classifier, optional, default LassoTuned
+        The classifier to use
+    target_transformer_name: str, optional, default None
+        The name of the target transformer. If None, no target transformation is done. Options are:
+        - "normalized": NormalizeTransformer
+        - "quantile_uniform": QuantileTransformer (uniform)
+        - "quantile_normal": QuantileTransformer (normal)
+        - "powertransformer": PowerTransformer
+        - "logtransformer": LogTransformer(base=10)
+        - "lntransformer": LogTransformer(base=np.e)
+        - "robustscaler": RobustScaler
+    feature_transformer_name: str, optional, default None
+        The name of the feature transformer. If None, no feature transformation is done. It has the same possible values
+        as target_transformer_name.
+    feature_transform_condition: Callable, optional, default None
+        The function takes the training set as input and returns a list of all the columns that should be transformed.
+        If None, all columns are transformed.
+    suffix: str, optional, default ""
+        Suffix to add to the results file name.
+
+    Returns
+    -------
+    None
+        The results are saved in the results file.
+    """
     results = load_results(NAME, dataset_, suffix=suffix, reset=False)
     clf_name = get_clf_full_name(clf.name, target_transformer_name, feature_transformer_name,
                                  feature_transform_condition is not None)
@@ -52,10 +90,6 @@ def run(data: Dataset, clf=DEFAULT_CLFS[1], target_transformer_name=None, featur
     all_smape = []
     all_error = []
 
-    # if nb_splits*nb_repeats - 1 in results[clf_name].keys():
-    #     print("All folds already in results, skipping...")
-    #     # save_results(results, NAME, dataset_, suffix=suffix)
-    #     return
     data.load_dataset()
 
     for i, (train_index, test_index) in enumerate(rskf.split(data.X, data.y)):
@@ -86,7 +120,6 @@ def run(data: Dataset, clf=DEFAULT_CLFS[1], target_transformer_name=None, featur
         else:
             no_alpha_search(clf, data)
         predictions = clf.predict(data.Xtest)
-        # error_bars.append(data.ytest - predictions)
 
         transformed_rse, transformed_mape, transformed_smape, transformed_error, rse, mape, smape, error = compute_metrics(data, predictions, target_transformer_name)
         all_transformed_rse.append(transformed_rse)
@@ -108,8 +141,6 @@ def run(data: Dataset, clf=DEFAULT_CLFS[1], target_transformer_name=None, featur
                                 Keys.transformed_mape: transformed_mape,
                                 Keys.transformed_smape: transformed_smape}
     if len(all_rse) == 10:
-        # print(f"Average RMSE {'normalized' if normalize_y else ''}:", np.mean(all_rmse))
-
         results[clf_name].update({Keys.average_rse: np.nanmean(all_rse),
                                   Keys.std_rse: np.nanstd(all_rse)})
         results[clf_name].update({Keys.average_mape: np.nanmean(all_mape),
@@ -124,20 +155,12 @@ def run(data: Dataset, clf=DEFAULT_CLFS[1], target_transformer_name=None, featur
                                     Keys.std_transformed_smape: np.nanstd(all_transformed_smape)})
 
         save_results(results, NAME, dataset_, suffix=suffix)
-    # elif len(all_rse) == 10:
-    #     results[clf_name].update({Keys.average_rse: np.mean(all_rse),
-    #                               Keys.std_rse: np.std(all_rse)})
-    #     save_results(results, NAME, dataset_, suffix=suffix)
-    # elif len(all_transformed_rse) == 10:
-    #     results[clf_name].update({Keys.average_transformed_rse: np.mean(all_transformed_rse),
-    #                               Keys.std_transformed_rse: np.std(all_transformed_rse)})
-    #     save_results(results, NAME, dataset_, suffix=suffix)
-    # if Keys.average_rse not in results[clf_name].keys():
-    #     print("Average RSE was not added to the results :(")
-    # print_results(results)
 
 
 def do_alpha_search(clf, data):
+    """
+    Perform an alpha search for the Lasso and Ridge classifiers. The best alpha is used to fit the classifier.
+    """
     alpha_search = AlphaSearch()
     for alpha_record in alpha_search:
         clf.update_lin_clf_alpha(alpha_record.alpha)
@@ -149,10 +172,33 @@ def do_alpha_search(clf, data):
 
 
 def no_alpha_search(clf, data):
+    """
+    Fit the classifier without an alpha search.
+    """
     clf.fit(data.Xtrain, data.ytrain)
 
 
 def run_all_target_transformers(dataset: Dataset, clf, feature_transformer, suffix):
+    """
+    Run the experiment for all target transformers on the given dataset and classifier. The results are saved in the
+    results file.
+
+    Parameters
+    ----------
+    dataset: Dataset
+        The dataset to run the experiment on
+    clf: Classifier
+        The classifier to use
+    feature_transformer: str
+        The name of the feature transformer. Possible values are:
+        - 'StandardScaler': StandardScaler
+        - 'MinMaxScaler': MinMaxScaler
+        - 'RobustScaler': RobustScaler
+        - 'PowerTransformer': PowerTransformer
+        - 'FunctionTransformer': FunctionTransformer
+    suffix: str
+        Suffix to add to the results file name.
+    """
     run(dataset, clf=clf, feature_transformer_name=feature_transformer, suffix=suffix)
     run(dataset, clf=clf, target_transformer_name=Keys.transformer_normalized,
         feature_transformer_name=feature_transformer, suffix=suffix)
@@ -175,11 +221,17 @@ def run_all_target_transformers(dataset: Dataset, clf, feature_transformer, suff
 
 
 if __name__ == '__main__':
+    """
+    Run the experiments for the imbalanced distribution datasets. The results are saved in the results file. The prompt
+    should look like this: python imbalanced_distribution.py <dataset> [--feature_transformer <feature_transformer>]
+    [--suffix <suffix>] where <dataset> is the name of the dataset to run the experiment on, <feature_transformer> is the
+    name of the feature transformer to use, and <suffix> is the suffix to add to the results file name. If <dataset> is
+    'all', the experiment is run on all datasets with an imbalanced distribution. If <feature_transformer> is not 
+    provided, no feature transformation is done. If <suffix> is not provided, no suffix is added to the results file.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('dataset', type=str)
     parser.add_argument('--feature_transformer', type=str, nargs="?", default=None)
-    # parser.add_argument('--plot_error', action='store_true')
-    # parser.add_argument("--auc", type=float, nargs="?", default=default_auc_percentage)
     parser.add_argument("--suffix", type=str, nargs="?", default="")
     args = parser.parse_args()
     dataset_ = args.dataset
@@ -201,9 +253,3 @@ if __name__ == '__main__':
             print(f"Running regressor {clf_.name}...")
             run_all_target_transformers(datasets[dataset_.lower()](), clf_, feature_transformer_, suffix_)
 
-    # if dataset_ == 'all':
-    #     print("RMSE:")
-    #     print_all_results_excel(all_datasets, Keys.average_rmse, NAME, suffix=suffix_)
-    #     print("###########################################################################")
-    #     print("NRMSE:")
-    #     print_all_results_excel(all_datasets, Keys.average_nrmse, NAME, suffix=suffix_)

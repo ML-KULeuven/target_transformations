@@ -26,6 +26,37 @@ MAX_NB_FOLDS = float('inf')
 
 
 def run(data: Dataset, clf_name, target_transformer_name=None, suffix="", force=False):
+    """
+    This function (1) transforms the target variable with the given target transformer, (2) fits the classifier on the
+    training data and transformed target, and (3) computes the metrics for the predictions in the transformed target
+    space and the original target space. The results are saved in the results file and nothing is returned.
+
+    Parameters
+    ----------
+    data : Dataset
+        The dataset to run the experiment on.
+    clf_name : str
+        The name of the classifier to use.
+    target_transformer_name : str, optional, default None
+        The name of the target transformer to use. If None, the target variable is not transformed. Options are:
+        - "normalized": NormalizeTransformer
+        - "quantile_uniform": QuantileTransformer (uniform)
+        - "quantile_normal": QuantileTransformer (normal)
+        - "powertransformer": PowerTransformer
+        - "logtransformer": LogTransformer(base=10)
+        - "lntransformer": LogTransformer(base=np.e)
+        - "robustscaler": RobustScaler
+    suffix : str, optional, default ""
+        Suffix to add to the results file name.
+    force : bool, optional, default False
+        Whether to recompute everything even if the results file already contain the results for the particular fold.
+
+    Returns
+    -------
+    None
+        The results are saved in the results file.
+
+    """
     results = load_results(NAME, data.name, suffix=suffix, reset=False)
     clf_full_name = get_clf_full_name(clf_name, target_transformer_name)
     if clf_full_name not in results:
@@ -113,22 +144,22 @@ def run(data: Dataset, clf_name, target_transformer_name=None, suffix="", force=
 
 
 def run_all_target_transformers(dataset: Dataset, suffix, force=False):
+    """
+    Run the forecasting experiment for all target transformers on the given dataset.
+    """
     for clf_name in forecasting_clfs.keys():
         run(dataset, clf_name, suffix=suffix, force=force)
-    # run(dataset, target_transformer_name=Keys.transformer_normalized, suffix=suffix)
-    # run(dataset, target_transformer_name=Keys.transformer_quantile_uniform, suffix=suffix)
-    # run(dataset, target_transformer_name=Keys.transformer_quantile_normal, suffix=suffix)
-    # run(dataset, target_transformer_name=Keys.transformer_robustscaler, suffix=suffix)
-    # try:
-    #     run(dataset,  target_transformer_name=Keys.transformer_powertransformer, suffix=suffix)
-    # except (ValueError, BracketError) as e:
-    #     print(f"PowerTransformer failed for {dataset.name}")
-    #
-    # run(dataset, target_transformer_name=Keys.transformer_logtransformer, suffix=suffix)
-    # run(dataset, target_transformer_name=Keys.transformer_lntransformer, suffix=suffix)
 
 
 if __name__ == '__main__':
+    """
+    Run the experiments for the forecasting datasets. The results are saved in the results file. The prompt
+    should look like this: python forecasting.py <dataset> [--suffix <suffix>] [--force] where <dataset> is the name of 
+    the dataset to run the experiment on, <suffix> is the suffix to add to the results file name, and --force is an
+    optional argument to recompute everything even if the results file already contains the results. If <dataset> is
+    'all', the experiment is run on all forecasting datasets. If <suffix> is not provided, no suffix is added to the
+    results file.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('dataset', type=str)
     # parser.add_argument('--plot_error', action='store_true')

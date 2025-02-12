@@ -7,16 +7,17 @@ base = os.path.dirname(os.path.realpath(__file__))
 
 def plot_rel_diff():
     path = os.path.join(base, "..", "..", "..", "results", "plots", "transformation_results", "results_rel_diff")
-    algorithms = ["Lasso", "RidgeRegression", "GBRegressor"]
-    transformations = ["Quantile Uniform", "Quantile Normal", "PowerTransformer", "Ln"]
-    rse = {"values": np.array([[5.93, -9.09, -2.33, -3.24],
-                     [6.46, -10.8, -4, -3.7],
-                     [18.62, 19.36, 5.6, 1.13]]),
-           "significance": np.array([[False, False, False, False],
-                            [False, False, False, False],
-                            [False, False, False, False]]),
-           "y_lower": -17,
-           "y_upper": 27,
+    algorithms = ["Lasso", "Ridge", "GBTR", "SVR"]
+    transformations = ["Quantile Uniform", "Quantile Normal", "Yeo-Johnson", "Ln"]
+    rse = {"values": np.array([[1.96, -11.39, -4.53, -4.55],
+                     [3.55, -13.44, -6.16, -5.9],
+                     [12.4, 19.36, 6.38, 1.29],
+                    [-47.92, -62.60, -39.50, -50.09]]),
+           # "significance": np.array([[False, False, False, False],
+           #                  [False, False, False, False],
+           #                  [False, False, False, False]]),
+           "y_lower": -75,
+           "y_upper": 25,
            "nb_digits": 2,
            "suffix": "%",
            "higher is better": False,
@@ -25,29 +26,30 @@ def plot_rel_diff():
            # "legend_position": (0.61, 0.39),
            "legend_position": None,
            "save_name": path + "_rse"}
-    mape = {"values": np.array([[-6.28, -8.02, -6.84, -11.42],
-                    [-6.48, -7.87, -9.91, -9.5],
-                    [-3.14, 0.23, -2.88, -4.39]]),
-            "significance": np.array([[False, True, False, False],
-                            [False, True, False, False],
-                            [False, False, False, False]]),
-            "y_lower": -15,
-            "y_upper": 10,
-            "nb_digits": 2,
-            "suffix": "%",
-            "higher is better": False,
-            "title": 'MAPE w.r.t. no channel selection w.r.t no target transformation',
-           "legend_position": None,
-            "ylabel": 'Relative MAPE difference (%) w.r.t. no target transformation',
-            "save_name": path + "_mape"}
-    smape = {"values": np.array([[-4.8, -7.79, -6.78, -6.06],
-                                [-4.95, -5.08, -6.53, -6.15],
-                                [-0.02, 2.62, -1.92, -1.63]]),
-            "significance": np.array([[False, False, False, False],
-                                      [False, False, False, False],
-                                      [False, False, False, False]]),
-            "y_lower": -10,
-            "y_upper": 6,
+    # mape = {"values": np.array([[-6.28, -8.02, -6.84, -11.42],
+    #                 [-6.48, -7.87, -9.91, -9.5],
+    #                 [-3.14, 0.23, -2.88, -4.39]]),
+    #         "significance": np.array([[False, True, False, False],
+    #                         [False, True, False, False],
+    #                         [False, False, False, False]]),
+    #         "y_lower": -15,
+    #         "y_upper": 10,
+    #         "nb_digits": 2,
+    #         "suffix": "%",
+    #         "higher is better": False,
+    #         "title": 'MAPE w.r.t. no channel selection w.r.t no target transformation',
+    #        "legend_position": None,
+    #         "ylabel": 'Relative MAPE difference (%) w.r.t. no target transformation',
+    #         "save_name": path + "_mape"}
+    smape = {"values": np.array([[-4.93, -8.93, -8.05, -10.99],
+                                [-5.17, -6.16, -8.17, -8.94],
+                                [-0.02, 3.95, -2.27, -1.67],
+                                 [-7.16, -18.43, -16.11, -11.07]]),
+            # "significance": np.array([[False, False, False, False],
+            #                           [False, False, False, False],
+            #                           [False, False, False, False]]),
+            "y_lower": -25,
+            "y_upper": 5,
             "nb_digits": 2,
            "suffix": "%",
            "higher is better": False,
@@ -86,11 +88,9 @@ def plot_rel_diff():
 
         # Adding values on top of each bar or below if the value is negative, with padding
         for j, bar in enumerate(bars):
-            # yval = bar.get_height()
             xval = bar.get_width()
             padding = (y_upper-y_lower)/100 if xval > 0 else -(y_upper-y_lower)/100*1.3
-            # if mask_matrix[j,i]:
-            if metric["significance"][j, i]:
+            if "significance" in metric.keys() and metric["significance"][j, i]:
                 ystr = f'{xval:.{nb_digits}f}{metric["suffix"]}*'
             else:
                 ystr = f'{xval:.{nb_digits}f}{metric["suffix"]}'
@@ -117,8 +117,8 @@ def plot_rel_diff():
     # Adding labels "Better" and "Worse" next to the arrow
     higher = "Better" if metric["higher is better"] else "Worse"
     lower = "Worse" if metric["higher is better"] else "Better"
-    ax.text(y_upper*0.94, 2.7, higher, ha='center', va='center', fontsize=18, color='grey')
-    ax.text(y_lower*0.94, 2.7, lower, ha='center', va='center', fontsize=18, color='grey')
+    ax.text(y_upper*0.94, 3.7, higher, ha='center', va='center', fontsize=18, color='grey')
+    ax.text(y_lower*0.94, 3.7, lower, ha='center', va='center', fontsize=18, color='grey')
 
     # Removing the y-axis spine
     ax.spines['left'].set_color('none')
@@ -150,7 +150,8 @@ def plot_rel_diff():
                )
 
     # Add the text in the bottom left of the figure
-    fig.text(0.1, 0.95, '* represents a significant difference', ha='left', va='center', fontsize=15, color='grey')
+    if "significance" in metric.keys():
+        fig.text(0.1, 0.95, '* represents a significant difference', ha='left', va='center', fontsize=15, color='grey')
 
     # Display the plot
     plt.tight_layout()

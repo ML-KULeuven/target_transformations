@@ -46,18 +46,6 @@ def elementwise_mean(arrays: List[np.ndarray]) -> np.ndarray:
     padded_arrays = np.array([np.pad(array, (0, max_length - array.shape[0]), constant_values=np.nan) for array in arrays])
     return np.nanmean(padded_arrays, axis=0)
 
-def isworse(metric, reference):  # higher is better
-    return metric < reference
-
-
-# def is_almost_eq(metric, reference, relerr=1e-5):
-#     eps = abs((metric - reference) / reference)
-#     return eps < relerr
-#
-#
-# def is_not_almost_eq(metric, reference, relerr=1e-5):
-#     return not is_almost_eq(metric, reference, relerr)
-
 
 def encode_onehot(y: Union[pd.Series, np.ndarray]) -> Union[pd.Series, np.ndarray]:
     """
@@ -72,19 +60,54 @@ def encode_onehot(y: Union[pd.Series, np.ndarray]) -> Union[pd.Series, np.ndarra
     return y_onehot
 
 
-def load_results(experiment_name, dataset_name, suffix=None, reset=False):
+def load_results(experiment_name, dataset_name, suffix=None, reset=False) -> dict:
+    """
+    Load results from a file. If the file does not exist, it is created.
+
+    Parameters
+    ----------
+    experiment_name : str
+        The name of the experiment.
+    dataset_name : str
+        The name of the dataset.
+    suffix : str, optional
+        The suffix to add to the file name, by default None.
+    reset : bool, optional
+        Whether to reset the results, by default False. If True, the results are reset to an empty dictionary with
+        the dataset name as the only key.
+
+    Returns
+    -------
+    dict
+        The results
+    """
     path, path_txt = get_paths(experiment_name, dataset_name, suffix=suffix)
     if not os.path.exists(path): dill.dump({
         'dataset': dataset_name,
     }, open(path, 'wb'))
     if reset:
-        results = {}
+        results = {'dataset': dataset_name}
     else:
         results = dill.load(open(path, 'rb'))
     return results
 
 
 def save_results(results, experiment_name, dataset_name, suffix=None):
+    """
+    Save results to a file. The results are saved in a pickle file and a txt file. Every key in "exclude_txt" is
+    excluded from the txt file to support readability.
+
+    Parameters
+    ----------
+    results : dict
+        The results to save.
+    experiment_name : str
+        The name of the experiment.
+    dataset_name : str
+        The name of the dataset.
+    suffix : str, optional
+        The suffix to add to the file name, by default None.
+    """
     path, path_txt = get_paths(experiment_name, dataset_name, suffix=suffix)
     write_to_txt(results, path_txt, exclude=exclude_txt)
     dill.dump(results, open(path, 'wb'))
@@ -219,16 +242,6 @@ def get_paths(experiment_name, dataset_name, suffix=None):
         Path to txt file
     """
     results_dir = get_results_dir()
-    # if "dtai" in base:
-    #     # config = base.split("/")[-1]
-    #     base = "/cw/dtaiarch/ml/2021-LorenNuyts/evaluation"
-    #     # if not os.path.exists(base):
-    #     #     os.mkdir(base)
-    #         # os.mkdir(os.path.join(base, 'results'))
-    # else:
-    #     splitted = base.split("/")
-    #     pos = splitted.index("src")
-    #     base = "/".join(splitted[:pos])
     file_name = get_file_name_base(dataset_name.lower(), suffix)
     path_start = os.path.join(results_dir, experiment_name, file_name)
 
@@ -258,7 +271,26 @@ def get_results_dir():
             path = "/".join(splitted[:pos])
             return os.path.join(path, "results")
 
-def replace_last_occurences(s: str, substr_old: str, substr_new: str, nb_occurences: int) -> str:
-    li = s.rsplit(substr_old, nb_occurences)
+def replace_last_occurences(s: str, substr_old: str, substr_new: str, nb_occurrences: int) -> str:
+    """
+    Replace the last n occurrences of a substring in a string.
+
+    Parameters
+    ----------
+    s : str
+        The string to modify.
+    substr_old : str
+        The substring to replace.
+    substr_new : str
+        The new substring that replaces the old one.
+    nb_occurrences : int
+        The number of occurrences to replace.
+
+    Returns
+    -------
+    str
+        The modified string with the last n occurrences of the substring replaced by the new substring.
+    """
+    li = s.rsplit(substr_old, nb_occurrences)
     return substr_new.join(li)
 

@@ -1,11 +1,12 @@
 dill~=0.3.8
-certifi~=2024.2.2
+certifi~=2024.7.4
 matplotlib~=3.8.4
 numpy~=1.26.4
 pandas~=2.2.2
-scikit-learn~=1.4.2
+scikit-learn~=1.5.0
 scipy~=1.13.0
 seaborn~=0.13.2
 six~=1.16.0
+sktime~=0.36.0
 tables~=3.9.2
 ucimlrepo~=0.0.6

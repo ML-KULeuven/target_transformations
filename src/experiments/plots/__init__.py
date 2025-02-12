@@ -6,7 +6,7 @@ import numpy as np
 import seaborn as sns
 import pandas as pd
 
-from src.experiments.transform_target import DEFAULT_CLFS
+from src.experiments.imbalanced_distribution import DEFAULT_CLFS
 from src.experiments.utils import get_clf_full_name, load_results, Keys, get_paths, get_results_dir
 
 

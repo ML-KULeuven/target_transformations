@@ -68,6 +68,27 @@ class Keys:
 
 
 def get_transformer(transformer_name):
+    """
+    Get the transformer object based on the transformer name.
+
+    Parameters
+    ----------
+    transformer_name: str
+        Name of the transformer. Options are:
+        - "normalized": NormalizeTransformer
+        - "quantile_uniform": QuantileTransformer (uniform)
+        - "quantile_normal": QuantileTransformer (normal)
+        - "powertransformer": PowerTransformer
+        - "logtransformer": LogTransformer(base=10)
+        - "lntransformer": LogTransformer(base=np.e)
+        - "robustscaler": RobustScaler
+
+    Returns
+    -------
+    Object
+        Transformer object
+
+    """
     if transformer_name == Keys.transformer_normalized or transformer_name == "normalized":
         return NormalizeTransformer()
     elif transformer_name == Keys.transformer_quantile_uniform or transformer_name == "quantile_uniform":
