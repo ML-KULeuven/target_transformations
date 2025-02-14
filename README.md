@@ -25,3 +25,6 @@ Finally, the LateX table can be generated with:
 ```
 python3 -m src.experiments.print_results.run imbalanced_distribution -d <dataset> --latex
 ```
+
+# Acknowledgements
+This work received funding from the Interuniversity Special Research Fund (IBOF/21/075) and the Flemish Government under the “Onderzoeksprogramma Artifciële Intelligentie (AI) Vlaanderen” program. 
